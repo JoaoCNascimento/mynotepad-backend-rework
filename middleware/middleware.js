@@ -4,7 +4,7 @@ const User = require('../models/user');
 
 //auth middleware
 const requireAuth = (req, res, next) => {
-    const token = req.cookies.jwt;
+    const token = req.headers.authorization;
 
     //check token existence
     if (!token)
@@ -25,7 +25,7 @@ const requireAuth = (req, res, next) => {
 
 //Get the current user by decoding the token
 const checkCurrentUser = async (req) => {
-    const token = req.cookies.jwt;
+    const token = req.headers.authorization;
 
     let user = jwt.verify(token, authConfig.secret, async (err, decoded) => {
 
