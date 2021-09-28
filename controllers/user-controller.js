@@ -82,12 +82,9 @@ module.exports = {
         if (user) {
             let token = createToken(user.id);
 
-            res.cookie('jwt', token, {
-                maxAge
-            })
-
             return res.status(201).json({
-                ok: true
+                ok: true,
+                token
             })
         }
 
@@ -105,20 +102,13 @@ module.exports = {
 
         let user = await checkCurrentUser(req);
 
-        let updatedUser = await User.findByIdAndUpdate({
-            _id: user._id
-        }, {
-            name,
-            email,
-            birthDate
-        }, {
-            useFindAndModify: true
-        });
-
-        updatedUser.password = undefined;
+        let updatedUser = await User.findByIdAndUpdate(
+            { _id: user._id }, 
+            { name, email, birthDate }, 
+            { useFindAndModify: true });
 
         return res.status(200).json({
-            user: updatedUser
+            ok: true
         })
     },
     // delete user
@@ -136,11 +126,6 @@ module.exports = {
         }
 
         let user = await User.findByIdAndDelete(_user.id);
-
-        res.cookie('jwt', '', {
-            maxAge: 1,
-            expiresIn: 1
-        });
 
         return res.status(200).json({
             deleted: true
@@ -187,10 +172,6 @@ module.exports = {
 
         let token = createToken(user.id);
 
-        res.cookie('jwt', token, {
-            maxAge
-        })
-
         return res.status(201).json({
             ok: true,
             token
@@ -198,10 +179,6 @@ module.exports = {
     },
     // LogOut 
     get_user_logout: (req, res) => {
-        res.cookie('jwt', '', {
-            maxAge: 1,
-            expiresIn: 1
-        })
 
         return res.status(201).json({
             ok: true
@@ -213,6 +190,6 @@ function createToken(payload) {
     return jwt.sign({
         payload
     }, authConfig.secret, {
-        expiresIn: 86400,
+        expiresIn: 10800,
     })
 }
