@@ -1,16 +1,14 @@
 const express = require('express');
-const middleware = require('../middleware/middleware');
+const {requireAuth} = require('../middleware/middleware');
 const controller = require('../controllers/notepad-controller');
 const router = express.Router();
 
-router.use(middleware.requireAuth);
+router.use(requireAuth);
 
-router.get('/', controller.notepad);
-router.get('/criar_anotacao', controller.note_get);
-router.post('/criar_anotacao', controller.note_post);
-router.get('/editar_anotacao/:id', controller.note_edit_get);
-router.delete('/excluir_anotacao/:id', controller.note_delete);
-router.put('/alterar_anotacao/:id', controller.note_put);
-router.get('/meu_perfil', controller.user_profile);
+router.get('/', controller.get_notes);
+router.get('/:id', controller.get_note);
+router.post('/', controller.post_note);
+router.put('/:id', controller.put_note);
+router.delete('/:id',controller.delete_note);
 
 module.exports = router;
