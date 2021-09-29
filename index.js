@@ -22,13 +22,8 @@ app.use(cors({
 app.use(morgan('tiny'));
 
 //routes - start
-app.get('/', (req, res) => {
-    return res.status(200).json({
-        working: true
-    })
-});
 app.use("/api/v1/user", user);
-app.use("/api/v1/notepad", notepad);
+app.use("/api/v1/notes", notepad);
 //404 handling
 app.get('*', (req, res) => {
     return res.status(404).json({
