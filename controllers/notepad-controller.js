@@ -5,207 +5,100 @@ const User = require("../models/user");
 
 module.exports = {
 
-    notepad: async (req, res) => {
-
-        let user = await checkCurrentUser(req, res)
-
-        return res.status(200).json(user);
+    get_notes: async (req, res) => {
+        let user = await checkCurrentUser(req);
+        res.status(201).json({notes: user.notes})
     },
 
-    note_get: (req, res) => {
-        res.render('notepad/note');
-    },
+    post_note: async(req, res) => {
+        let user = await checkCurrentUser(req);
 
-    note_post: async (req, res) => {
-        const note = req.body;
+        const {title, description, color} = req.body;
 
-        if (!note.title || !note.content) {
-            return res.status(401).send({
-                error_message: "Os campos da anotação não podem ficar em branco."
-            })
-        }
-
-        if (note.title.length > 40) {
-            return res.status(401).send({
-                error_message: "O título da anotação não pode ter mais de 100 caracteres."
-            })
-        }
-
-        if (note.content.length > 400) {
-            return res.status(401).send({
-                error_message: "O conteúdo da anotação não pode ultrapassar os 500 caracteres."
-            })
-        }
-
-        const user = await checkCurrentUser(req, res);
-
-        await User.updateOne({
-                _id: user._id
-            }, {
+        let note = await User.updateOne(
+            {_id: user._id},
+            {
                 $push: {
                     notes: {
-                        title: note.title,
-                        content: note.content,
-                        color: note.color
+                        title,
+                        description,
+                        color
                     }
                 }
             })
-            .then((note) => {
-                return res.status(200).send({
-                    note: note
-                })
-            })
-            .catch((er) => {
-                console.log(er);
-                return res.status(500).send({
-                    error_message: "Erro no servidor, tente novamente mais tarde."
-                })
-            })
-    },
 
-    note_edit_get: async (req, res) => {
+            console.log(await User.findOne({
+                _id: user._id
+            }));
 
-        const user = await checkCurrentUser(req, res);
-        const note = await checkNote(user._id, req.params.id);
-
-        if (!note) {
-            return res.redirect('/notepad');
+        if(note) {
+            return res.status(201).json({ ok: true});
         }
 
-        return res.send(200).json({
-            note: note,
-
-            colors: {
-                yellow: "yellow",
-                blue: "blue",
-                black: "black",
-                green: "green",
-                pink: "pink",
-                red: "red",
-                white: "white"
-            }
-        })
+        return res.status(500).send({error_message: "Houve um erro no servidor."});
     },
 
-    note_delete: async (req, res) => {
-        const user = await checkCurrentUser(req, res);
-        const data = await deleteNote(user._id, req.params.id);
+    put_note: async (req, res) => {
 
-        if (data) {
+        const {title, description, color} = req.body;
+        const user = await checkCurrentUser(req);
+        const noteUpdated = await User.updateOne(
+            { _id: user._id, 'notes._id': req.params.id}, 
+            {
+                '$set': {
+                    'notes.$.title': title,
+                    'notes.$.description': description,
+                    'notes.$.color': color,
+                    'notes.$.updatedAt': new Date()
+                }
+            });
+
+        if (noteUpdated) {
             return res.status(200).json({
-                success: "Excluída com sucesso."
-            })
-        }
-        return res.status(200).json({
-            error_message: "Houve um erro no servidor, tente novamente mais tarde."
-        })
-    },
-
-    note_put: async (req, res) => {
-
-        const user = await checkCurrentUser(req, res);
-        const noteUpdated = await updateNote(user._id, req.params.id, req.body);
-
-        if (!noteUpdated) {
-            return res.status(500).json({
-                error_message: "Não foi possível salvar as alterações, tente novamente mais tarde."
+                ok: true
             })
         }
 
-        return res.status(200).json({
-            success: "Alterações salvas com êxito!"
+        return res.status(500).json({
+            error_message: "Houve um erro no servidor."
         })
-
     },
 
-    user_profile: async (req, res) => {
-        const user = await checkCurrentUser(req, res);
+    delete_note: async (req, res) => {
+        
+        let user = await checkCurrentUser(req);
 
-        let dateFormat = () => {
-            let day = user.birthDate.substring(8, 10);
-            let month = user.birthDate.substring(5, 7);
-            let year = user.birthDate.substring(0, 4);
-            let formattedBirthDate = day + "/" + month + "/" + year;
-            return formattedBirthDate;
-        }
-
-        user.birthDate = dateFormat();
-
-        return res.status(200).json({
-            user
-        });
-    },
-}
-
-//NOTE CRUD 
-//UPDATE
-const updateNote = async (user_id, note_id, newNote) => {
-
-    const result = await User.updateOne({
-            _id: user_id,
-            'notes._id': note_id
-        }, {
-            '$set': {
-                'notes.$.title': newNote.title,
-                'notes.$.content': newNote.content,
-                'notes.$.color': newNote.color,
-                'notes.$.updatedAt': Date.now()
-            }
-        })
-        .then((note) => {
-            return true;
-        })
-        .catch((er) => {
-            console.log("Erro:" + er);
-            return false;
-        })
-
-    return result;
-}
-
-//READ 
-//this function look for an specific note inside a user collection
-const checkNote = async (user_id, note_id) => {
-
-    let note = await User.findOne({
-        _id: user_id
-    }, {
-        notes: {
-            $elemMatch: {
-                _id: note_id
-            }
-        }
-    }).lean().catch(() => {
-        return false;
-    });
-
-    if (note) {
-        note = note.notes;
-        return note;
-    } else {
-        return false;
-    }
-}
-
-//DELETE
-//this function look for an specific note inside a user collection 
-//and then delete it
-const deleteNote = async (user_id, note_id) => {
-    const result = await User.updateOne({
-            _id: user_id
-        }, {
-            $pull: {
-                notes: {
-                    _id: note_id
+        await User.updateOne(
+            {_id: user._id},
+            {
+                $pull: {
+                    notes: {
+                        _id: req.params.id
+                    }
                 }
             }
-        })
-        .then(() => {
-            return true;
-        })
-        .catch((er) => {
-            return false;
-        });
+        );
 
-    return result;
+        return res.status(200).send({ok: true});
+    },
+
+    get_note: async (req, res) => {
+        const user = await checkCurrentUser(req);
+        
+        let note = await User.findOne({
+            _id: user._id
+        }, {
+            notes: {
+                $elemMatch: {
+                    _id: req.params.id
+                }
+            }
+        }).lean().catch(er => null);
+
+        if (note) {
+            return res.status(203).json({ note: note.notes[0]} );
+        }
+
+        return res.status(500).json({error_message: "Erro no servidor."});
+    }
 }
