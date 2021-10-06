@@ -1,6 +1,6 @@
 const express = require('express');
 const {requireAuth} = require('../middleware/middleware');
-const controller = require('../controllers/notepad-controller');
+const controller = require('../controllers/notes-controller');
 const router = express.Router();
 
 router.use(requireAuth);

@@ -16,7 +16,11 @@ module.exports = {
     get_user: async (req, res) => {
         const user = await checkCurrentUser(req);
 
+        if (!user)
+            return null;
+
         user.password = undefined;
+        user.notes = undefined;
 
         if (user) {
             return res.status(201).json({
@@ -39,13 +43,13 @@ module.exports = {
         } = req.body;
 
         if (!name || name.length <= 2) {
-            return res.status(200).json({
+            return res.status(401).json({
                 error_message: 'O campo de nome deve ter no mínimo 3 caracteres.'
             });
         }
 
         if (!email || !isEmail(email)) {
-            return res.status(200).json({
+            return res.status(401).json({
                 error_message: 'Email inválido.'
             });
         }
@@ -55,26 +59,26 @@ module.exports = {
         });
 
         if (checkEmail) {
-            return res.status(200).send({
+            return res.status(401).send({
                 error_message: 'Email já está em uso.'
             });
         }
 
         if (!birthDate || !isDate(birthDate)) {
-            return res.status(200).json({
+            return res.status(401).json({
                 error_message: 'Formato de data inválido.'
             })
         }
 
         if (!password || password.length < 6) {
-            return res.status(200).json({
+            return res.status(401).json({
                 error_message: 'A senha deve possuir pelo menos 6 caracteres.'
             })
         }
 
         const user = await User.create({
             name,
-            email,
+            email: email.toLowerCase(),
             birthDate,
             password
         });
@@ -102,10 +106,15 @@ module.exports = {
 
         let user = await checkCurrentUser(req);
 
-        let updatedUser = await User.findByIdAndUpdate(
-            { _id: user._id }, 
-            { name, email, birthDate }, 
-            { useFindAndModify: true });
+        let updatedUser = await User.findByIdAndUpdate({
+            _id: user._id
+        }, {
+            name,
+            email,
+            birthDate
+        }, {
+            useFindAndModify: true
+        });
 
         return res.status(200).json({
             ok: true
@@ -120,7 +129,7 @@ module.exports = {
         let _user = await checkCurrentUser(req);
 
         if (!bcrypt.compareSync(password, _user.password)) {
-            return res.status(200).json({
+            return res.status(401).json({
                 error_message: 'Exclusão não permitida.'
             })
         }
@@ -139,13 +148,13 @@ module.exports = {
         } = req.body;
 
         if (!email || !isEmail(email)) {
-            return res.status(200).json({
+            return res.status(401).json({
                 error_message: 'Digite um email válido.'
             })
         }
 
         if (!password || password.length === 0) {
-            return res.status(200).json({
+            return res.status(401).json({
                 error_message: 'Digite a sua senha.'
             })
         }
@@ -155,13 +164,13 @@ module.exports = {
         });
 
         if (!user) {
-            return res.status(200).json({
+            return res.status(401).json({
                 error_message: 'Senha ou email inválido(s).'
             })
         }
 
         if (!bcrypt.compareSync(password, user.password)) {
-            return res.status(200).json({
+            return res.status(401).json({
                 error_message: 'Senha ou email inválido(s).'
             })
         }
@@ -179,10 +188,13 @@ module.exports = {
     },
     // LogOut 
     get_user_logout: (req, res) => {
-
         return res.status(201).json({
             ok: true
         })
+    },
+
+    email_is_valid: (req, res) => {
+
     }
 }
 

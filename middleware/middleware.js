@@ -29,6 +29,10 @@ const checkCurrentUser = async (req) => {
 
     let user = jwt.verify(token, authConfig.secret, async (err, decoded) => {
 
+        if (!decoded) {
+            return null;
+        }
+
         let findUser = await User.findById(decoded.payload);
 
         if (findUser) {
