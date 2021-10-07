@@ -11,6 +11,6 @@ router.delete('/', requireAuth, controller.delete_user);
 router.put('/', requireAuth, controller.update_user);
 router.get('/login', controller.get_user_logout);
 router.post('/login', controller.post_user_login);
-router.patch('/validate_email', controller.email_is_valid);
+router.get('/validate_email', controller.email_confirm);
 
 module.exports = router;

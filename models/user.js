@@ -8,7 +8,7 @@ const noteSchema = mongoose.Schema({
         maxLength: 50
     },
 
-    description: {
+    content: {
         type: String,
         required: true,
         maxLength: 400
@@ -46,6 +46,12 @@ const userSchema = mongoose.Schema({
         type: String,
         required: true,
         minlength: 6
+    },
+
+    status: {
+        type: String,
+        enum: ['Pending', 'Active'],
+        default: 'Peding'
     },
 
     notes: [noteSchema]

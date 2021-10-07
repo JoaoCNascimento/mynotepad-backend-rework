@@ -2,6 +2,7 @@ const User = require('../models/user');
 const authConfig = require('../config/auth.json');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
 const {
     isEmail,
     isDate
@@ -193,9 +194,46 @@ module.exports = {
         })
     },
 
-    email_is_valid: (req, res) => {
 
-    }
+    // todo
+    email_confirm: (req, res) => {
+
+    },
+}
+
+// todo
+function send_email_confirmation(email, link) {
+
+    const transporter = nodemailer.createTransport({
+        service: 'Gmail',
+        port: 587,
+        auth: {
+            user: process.env.MAIL,
+            pass: process.env.MAIL_PASSWORD,
+        }
+    });
+
+    return transporter.sendMail({
+        from: `MyNotepad <${process.env.MAIL}>`,
+        to: email,
+        subject: "Confirmação de email",
+        html: "<div style='padding: 15px; align-items: center; width: 100%; border-radius: 25px'>" +
+
+            "<h1 style='margin: 15px auto; color: rgb(0, 119, 255);'>Bem vindo João!</h1>" +
+
+            "<p style='color:black; font-size: 1rem; margin: 15px auto'>Agradecemos por se cadastrar em nossa plataforma :)</p>" +
+
+            "<a style='margin: 15px auto; font-size: 0.9rem;' href='youtube.com.br'>Clique aqui para validar seu email.</a>" +
+            "</div>"
+    }).then(info => {
+        console.log(info);
+    }).catch(er => {
+        console.log(er);
+    });
+}
+// todo
+function password_recover() {
+
 }
 
 function createToken(payload) {

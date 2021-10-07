@@ -26,7 +26,7 @@ module.exports = {
 
         const {
             title,
-            description,
+            content,
             color
         } = req.body;
 
@@ -36,7 +36,7 @@ module.exports = {
             $push: {
                 notes: {
                     title,
-                    description,
+                    content,
                     color
                 }
             }
@@ -57,7 +57,7 @@ module.exports = {
 
         const {
             title,
-            description,
+            content,
             color
         } = req.body;
         const user = await checkCurrentUser(req);
@@ -72,7 +72,7 @@ module.exports = {
         }, {
             '$set': {
                 'notes.$.title': title,
-                'notes.$.description': description,
+                'notes.$.content': content,
                 'notes.$.color': color,
                 'notes.$.updatedAt': new Date()
             }
