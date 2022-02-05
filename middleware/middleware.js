@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const authConfig = require('../config/auth.json');
 const User = require('../models/user');
 
 //auth middleware
@@ -12,7 +11,7 @@ const requireAuth = (req, res, next) => {
             error_message: 'Token not provided.'
         })
 
-    jwt.verify(token, authConfig.secret, (err, decoded) => {
+    jwt.verify(token, process.env.SECRET, (err, decoded) => {
         if (err) {
             return res.status(401).json({
                 error_message: 'Invalid token.'
@@ -23,11 +22,37 @@ const requireAuth = (req, res, next) => {
     next();
 };
 
+const isTokenValid = (token) => {
+    return jwt.verify(token, process.env.SECRET, (err, decoded) => {
+        if(err) 
+            return false
+        
+        return true
+    })
+}
+
 //Get the current user by decoding the token
 const checkCurrentUser = async (req) => {
     const token = req.headers.authorization;
 
-    let user = jwt.verify(token, authConfig.secret, async (err, decoded) => {
+    let user = jwt.verify(token, process.env.SECRET, async (err, decoded) => {
+
+        if (!decoded) {
+            return null;
+        }
+
+        let findUser = await User.findById(decoded.payload);
+
+        if (findUser) {
+            return findUser;
+        }
+    })
+
+    return user;
+}
+
+const checkCurrentUserByQuery = async (token) => {
+    let user = jwt.verify(token, process.env.SECRET, async (err, decoded) => {
 
         if (!decoded) {
             return null;
@@ -46,4 +71,6 @@ const checkCurrentUser = async (req) => {
 module.exports = {
     requireAuth,
     checkCurrentUser,
+    checkCurrentUserByQuery,
+    isTokenValid
 };
