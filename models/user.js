@@ -51,12 +51,12 @@ const userSchema = mongoose.Schema({
     status: {
         type: String,
         enum: ['Pending', 'Active'],
-        default: 'Peding'
+        default: 'Pending'
     },
 
     notes: [noteSchema]
 }, {
-    timestamps: false
+    timestamps: true
 });
 
 userSchema.pre('save', async function (next) {
