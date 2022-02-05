@@ -8,11 +8,10 @@ module.exports = {
     get_notes: async (req, res) => {
         let user = await checkCurrentUser(req);
 
-        if (user === null) {
+        if(user === null)
             return;
-        }
 
-        res.status(201).json({
+        return res.status(201).json({
             notes: user.notes
         });
     },
@@ -21,36 +20,39 @@ module.exports = {
         let user = await checkCurrentUser(req);
 
         if (user === null) {
-            return;
+            return res.status(404).json({ error_message: "Invalid token, user not found." });
         }
 
-        const {
-            title,
-            content,
-            color
-        } = req.body;
+        try {
+            const {
+                title,
+                content,
+                color
+            } = req.body;
 
-        let note = await User.updateOne({
-            _id: user._id
-        }, {
-            $push: {
-                notes: {
-                    title,
-                    content,
-                    color
+            let note = await User.updateOne({
+                _id: user._id
+            }, {
+                $push: {
+                    notes: {
+                        title,
+                        content,
+                        color
+                    }
                 }
+            })
+    
+            if (note) {
+                return res.status(201).json({
+                    ok: true
+                });
             }
-        })
-
-        if (note) {
-            return res.status(201).json({
-                ok: true
-            });
+        }
+        catch(err)
+        {
+            return res.status(500).json({ error_message: "Houve um erro no servidor." })
         }
 
-        return res.status(500).send({
-            error_message: "Houve um erro no servidor."
-        });
     },
 
     put_note: async (req, res) => {
@@ -60,10 +62,15 @@ module.exports = {
             content,
             color
         } = req.body;
+
+        if (!title || !content || !color) {
+            return res.status(400).json({ error_message: "Some fields are missing." })
+        }
+
         const user = await checkCurrentUser(req);
 
         if (user === null) {
-            return;
+            return res.status(404).json({ error_message: "Invalid token, user not found." });
         }
 
         const noteUpdated = await User.updateOne({
@@ -93,7 +100,7 @@ module.exports = {
         let user = await checkCurrentUser(req);
 
         if (user === null) {
-            return;
+            return res.status(404).json({ error_message: "Invalid token, user not found." });
         }
 
         await User.updateOne({
@@ -104,7 +111,7 @@ module.exports = {
                     _id: req.params.id
                 }
             }
-        });
+        }).catch(er => console.log("Erro ao deletar"));
 
         return res.status(200).send({
             ok: true
@@ -126,16 +133,14 @@ module.exports = {
                     _id: req.params.id
                 }
             }
-        }).lean().catch(er => null);
+        }).lean().catch(er => console.log("Erro ao procurar anotação por id."));
 
-        if (note) {
+        if (note && note.notes) {
             return res.status(203).json({
                 note: note.notes[0]
             });
         }
 
-        return res.status(500).json({
-            error_message: "Erro no servidor."
-        });
+        return res.status(404).json({ error_message: "Note not found." });
     }
 }
