@@ -284,7 +284,7 @@ function send_email_confirmation(user, token) {
         attachments: [
             {
                 cid: 'image',
-                path: path.resolve('resources\\images\\mynotepad-notes.png'),
+                path: path.join('resources','images','mynotepad-notes.png'),
                 filename: 'mynotepad-notes.png'
             }
         ]
