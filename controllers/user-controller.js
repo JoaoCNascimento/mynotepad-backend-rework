@@ -1,5 +1,4 @@
 const User = require('../models/user');
-const authConfig = require('../config/auth.json');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
@@ -9,8 +8,12 @@ const {
 } = require('validator');
 const maxAge = 1920000;
 const {
-    checkCurrentUser
-} = require('../middleware/middleware')
+    checkCurrentUser,
+    checkCurrentUserByQuery,
+    isTokenValid
+} = require('../middleware/middleware');
+
+const loginUrl = require('../config/config.js').loginUrl; 
 
 module.exports = {
     // get user
@@ -44,13 +47,13 @@ module.exports = {
         } = req.body;
 
         if (!name || name.length <= 2) {
-            return res.status(401).json({
+            return res.status(400).json({
                 error_message: 'O campo de nome deve ter no mínimo 3 caracteres.'
             });
         }
 
         if (!email || !isEmail(email)) {
-            return res.status(401).json({
+            return res.status(400).json({
                 error_message: 'Email inválido.'
             });
         }
@@ -60,19 +63,19 @@ module.exports = {
         });
 
         if (checkEmail) {
-            return res.status(401).send({
+            return res.status(400).send({
                 error_message: 'Email já está em uso.'
             });
         }
 
         if (!birthDate || !isDate(birthDate)) {
-            return res.status(401).json({
+            return res.status(400).json({
                 error_message: 'Formato de data inválido.'
             })
         }
 
         if (!password || password.length < 6) {
-            return res.status(401).json({
+            return res.status(400).json({
                 error_message: 'A senha deve possuir pelo menos 6 caracteres.'
             })
         }
@@ -85,12 +88,11 @@ module.exports = {
         });
 
         if (user) {
-            let token = createToken(user.id);
+            await send_email_confirmation(user, createToken(user.id));
 
             return res.status(201).json({
-                ok: true,
-                token
-            })
+                ok: true
+            });
         }
 
         return res.status(500).json({
@@ -135,7 +137,7 @@ module.exports = {
             })
         }
 
-        let user = await User.findByIdAndDelete(_user.id);
+        await User.findByIdAndDelete(_user.id);
 
         return res.status(200).json({
             deleted: true
@@ -143,10 +145,12 @@ module.exports = {
     },
     // Login
     post_user_login: async (req, res) => {
-        const {
+        let {
             email,
             password
         } = req.body;
+
+        email = email.toLowerCase();
 
         if (!email || !isEmail(email)) {
             return res.status(401).json({
@@ -176,9 +180,10 @@ module.exports = {
             })
         }
 
-        res.cookie('jwt', createToken(user.id), {
-            maxAge
-        })
+        if(user.status === 'Pending')
+            return res.status(401).json({
+                error_message: 'Ative sua conta para poder realizar o login.'
+            })
 
         let token = createToken(user.id);
 
@@ -194,15 +199,45 @@ module.exports = {
         })
     },
 
+    async send_confirmation(req, res) {
+        const { email } = req.body;
 
-    // todo
-    email_confirm: (req, res) => {
+        const user = await User.findOne({
+            email: email
+        }).then(result => {
+            return result;
+        }).catch(er => console.log(er));
 
+        if(user)
+            send_email_confirmation(user, createToken(user.id))
+
+        return res.status(200).json({ ok: true });
     },
+
+    async confirm_account(req, res) {
+        const token = req.query.token;
+
+        const validateToken = isTokenValid(token);
+
+        if(validateToken) {
+            const user = await checkCurrentUserByQuery(token);
+
+            let _user = await User.findByIdAndUpdate({
+                _id: user._id
+            }, {
+                status: 'Active'
+            }, {
+                useFindAndModify: true
+            });
+    
+            return res.redirect(loginUrl + '?accountConfirmed=true');
+        }
+
+        return res.status(400).json({ error_message: 'Invalid token' })
+    }
 }
 
-// todo
-function send_email_confirmation(email, link) {
+function send_email_confirmation(user, token) {
 
     const transporter = nodemailer.createTransport({
         service: 'Gmail',
@@ -215,23 +250,49 @@ function send_email_confirmation(email, link) {
 
     return transporter.sendMail({
         from: `MyNotepad <${process.env.MAIL}>`,
-        to: email,
+        to: user.email,
         subject: "Confirmação de email",
-        html: "<div style='padding: 15px; align-items: center; width: 100%; border-radius: 25px'>" +
-
-            "<h1 style='margin: 15px auto; color: rgb(0, 119, 255);'>Bem vindo João!</h1>" +
-
-            "<p style='color:black; font-size: 1rem; margin: 15px auto'>Agradecemos por se cadastrar em nossa plataforma :)</p>" +
-
-            "<a style='margin: 15px auto; font-size: 0.9rem;' href='youtube.com.br'>Clique aqui para validar seu email.</a>" +
-            "</div>"
+        html: 
+            `
+            <table style="border-collapse: collapse; border-radius: 5px; width: 100%;">
+                <tbody style="padding: 10px; background-color: #1c1c1c; border-radius: 5px">
+                    <tr>
+                        <td>
+                            <h1 style='font-family: "Trebuchet MS"; font-weight: 900; margin: 15px auto; color: #fff; text-align: center;'>Bem vindo ${user.name}!</h1> 
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="display: flex;">
+                            <img style='margin: 10px auto;' width='300' heigth='300' src='cid:image'/> 
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <p style='text-align: center; font-family: roboto; color:#fff; font-size: 1.3rem; margin: 15px auto'>Agradecemos por se cadastrar em nossa plataforma :)</p> 
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="display: flex;">
+                            <a style='margin: 10px; width: 100%; text-align: center; font-family: roboto; color: rgb(62, 200, 255); font-size: 1.2rem;' href='${process.env.SERVER_URL + 'confirm-account?token=' + token}'>Clique aqui para validar seu email.</a> 
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            `,
+        attachments: [
+            {
+                cid: 'image',
+                path: 'resources\\images\\mynotepad-notes.png',
+                filename: 'mynotepad-notes.png'
+            }
+        ]
     }).then(info => {
         console.log(info);
     }).catch(er => {
         console.log(er);
     });
 }
-// todo
+
 function password_recover() {
 
 }
@@ -239,7 +300,7 @@ function password_recover() {
 function createToken(payload) {
     return jwt.sign({
         payload
-    }, authConfig.secret, {
+    }, process.env.SECRET, {
         expiresIn: 10800,
     })
 }
