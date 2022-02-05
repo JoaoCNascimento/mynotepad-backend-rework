@@ -240,8 +240,8 @@ module.exports = {
 function send_email_confirmation(user, token) {
 
     const transporter = nodemailer.createTransport({
-        service: 'Gmail',
-        port: 587,
+        service: "Outlook365",
+        port: 2000,
         auth: {
             user: process.env.MAIL,
             pass: process.env.MAIL_PASSWORD,
