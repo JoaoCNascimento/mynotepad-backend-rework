@@ -18,6 +18,7 @@ app.use(express.json())
 app.use(cookieParser())
 app.use(cors({
     allowedHeaders: '*',
+    origin: process.env.FRONTEND_URL
 }));
 app.use(morgan('tiny'));
 
